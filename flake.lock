@@ -23,11 +23,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1786847328,
-        "narHash": "sha256-sXX5o2lKeuhIXoEg5mex9gmVAcOIxzmnOIIFQbkILag=",
+        "lastModified": 1786868962,
+        "narHash": "sha256-HbcWgVf11dJz2dzlMwqeLMaigm7wPyOz/DnLt0i9Puk=",
         "owner": "rkarsnk",
         "repo": "PVE-podman",
-        "rev": "e836ae3d63307a1f57dfa99a522fb0b27489ccd3",
+        "rev": "85613c67e9f76b0d05d357c0284cfc0c51bc3ef6",
         "type": "github"
       },
       "original": {
