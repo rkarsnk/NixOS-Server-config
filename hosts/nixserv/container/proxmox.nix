@@ -1,5 +1,7 @@
-{ ... }:
+{ inputs, ... }:
 {
+  imports = [ inputs.pve-podman.nixosModules.default ];
+
   services.pvePodman = {
     enable = true;
     parentIface = "enp1s0";
@@ -9,4 +11,3 @@
     pveDns = "192.168.24.1";
   };
 }
-

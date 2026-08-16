@@ -1,21 +1,14 @@
-# Edit this configuration file to define what should be installed on
-# your system.  Help is available in the configuration.nix(5) man page
-# and in the NixOS manual (accessible by running ‘nixos-help’).
-
 { config, pkgs, ... }:
 
 {
-  imports =
-    [ # Include the results of the hardware scan.
-      ./hardware-configuration.nix
-    ];
+  nixpkgs.hostPlatform = "x86_64-linux";
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
   # Networking
-  # NetworkManagerではなく静的設定を使うため無効化  
+  # NetworkManagerではなく静的設定を使うため無効化
   networking.networkmanager.enable = false;
 
   # Define your hostname.
