@@ -50,10 +50,10 @@
 
 
   # Open ports in the firewall.
-  networking.firewall.allowedTCPPorts = [ 8006 ];
-  networking.firewall.allowedUDPPorts = [ 8006 ];
+  #networking.firewall.allowedTCPPorts = [ 8006 ];
+  #networking.firewall.allowedUDPPorts = [ 8006 ];
   # Or disable the firewall altogether.
-  # networking.firewall.enable = false;
+  networking.firewall.enable = false;
 
 
   # Set your time zone.
@@ -97,7 +97,8 @@
     vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
     curl
     git
-  #  wget
+    wget
+    gnumake
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
@@ -124,5 +125,8 @@
   # Before changing this value read the documentation for this option
   # (e.g. man configuration.nix or on https://nixos.org/nixos/options.html).
   system.stateVersion = "26.05"; # Did you read the comment?
+
+
+  programs.nix-ld.enable = true;
 
 }
