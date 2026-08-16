@@ -40,6 +40,8 @@
 
   # DNSサーバー
   networking.resolvconf.extraOptions = [];
+  # 既定でedns0オプションがresolv.confに自動追加されるが、DNSSEC等を使わないため無効化
+  networking.resolvconf.dnsExtensionMechanism = false;
   networking.nameservers = [ "192.168.24.1" ];
 
 
