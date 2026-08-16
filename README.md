@@ -6,14 +6,16 @@ NixOS + [numtide/blueprint](https://github.com/numtide/blueprint) によるサ�
 
 ## 構成図
 
-ホストOS・コンテナ・Proxmox VE・その先の仮想マシンがそれぞれ独立したLAN上のIPを持つ階層構成です
-(NATを介さず、macvlanでLANに直接ぶら下がります)。
+ホストOS・コンテナ・Proxmox VE・その先の仮想マシンやLXCコンテナがそれぞれ独立したLAN上のIPを持つ階層構成です
+(NATを介さず、ホスト側のLinuxブリッジ `br0` を通じてLANに直接ぶら下がります)。
 
 ![nixservの構成図](docs/architecture.svg)
 
-- **ホストOS(nixserv)**: `enp1s0` に固定IP `192.168.24.50/24` を割り当てたNixOS本体。
-- **コンテナ(Podman)**: `enp1s0` を親インターフェースとしたmacvlanでLANに直結し、`192.168.24.51` を持つ。PVE本体はこのコンテナの中で動く。
-- **Proxmox VE**: コンテナ内の `vmbr0` でさらにLANへブリッジし、その配下で動く各VMもLAN上に個別のIPを持てる。
+- **ホストOS(nixserv)**: 物理NIC `enp1s0` をLinuxブリッジ `br0` のポートにし(`enp1s0` 自体はIPを持たない)、ホスト自身の固定IP `192.168.24.50/24` は `br0` に割り当てる。
+- **コンテナ(Podman)**: `br0` にPodmanの `bridge` ネットワーク(`mode=unmanaged`、`br0` の新規作成・NAT・ポートフォワードはPodman側で行わない)で接続する。コンテナの `eth0`(veth)自体はIPを持たない。PVE本体はこのコンテナの中で動く。
+- **Proxmox VE**: コンテナ内の `vmbr0` に `192.168.24.51/24` を割り当ててさらにLANへブリッジし、その配下で動く各VM・LXCコンテナ(例: `192.168.24.99`)もLAN上に個別のIPを持てる。
+
+以前はコンテナの接続にmacvlanを使っていたが、macvlan(既定のbridgeモード)は宛先MACアドレスをmacvlan子インターフェース自身のMACとハッシュ照合するだけで転送するため、コンテナ内 `vmbr0` がさらにブリッジする配下のVM/LXCのMAC宛フレームがLANとの間で正しく転送されない問題があった。本物のLinuxブリッジにはこの制約がないため、`br0` 方式に変更した(詳細は [PVE-podman](https://github.com/rkarsnk/PVE-podman) の `doc/SPEC.md` 13節を参照)。
 
 ## ディレクトリ構成
 
