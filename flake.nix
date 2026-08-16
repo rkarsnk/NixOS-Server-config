@@ -7,7 +7,7 @@
     blueprint.url = "github:numtide/blueprint";
     blueprint.inputs.nixpkgs.follows = "nixpkgs";
 
-    pve-podman.url = "github:rkarsnk/PVE-podman/for-nixos";
+    pve-podman.url = "github:rkarsnk/PVE-podman/main";
     pve-podman.inputs.nixpkgs.follows = "nixpkgs";
   };
 

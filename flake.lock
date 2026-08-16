@@ -44,16 +44,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1786868962,
-        "narHash": "sha256-HbcWgVf11dJz2dzlMwqeLMaigm7wPyOz/DnLt0i9Puk=",
+        "lastModified": 1786884814,
+        "narHash": "sha256-Ls2+xcUsLp268nvEdsTMuB/fClWlPaTcL/hcbnR/1lM=",
         "owner": "rkarsnk",
         "repo": "PVE-podman",
-        "rev": "85613c67e9f76b0d05d357c0284cfc0c51bc3ef6",
+        "rev": "38a197a84fd1d9498491f34b3a8e86717310f963",
         "type": "github"
       },
       "original": {
         "owner": "rkarsnk",
-        "ref": "for-nixos",
+        "ref": "main",
         "repo": "PVE-podman",
         "type": "github"
       }

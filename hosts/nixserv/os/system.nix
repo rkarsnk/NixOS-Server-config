@@ -27,8 +27,9 @@
   # IPv6を無効化
   networking.enableIPv6 = false;
 
-  # enp1s0 に固定IPを割り当て
-  networking.interfaces.enp1s0.ipv4.addresses = [{
+  # enp1s0 は services.pvePodman (hosts/nixserv/container/proxmox.nix) が
+  # br0 のポートとして専有するため、ホスト自身のIPは br0 側に設定する。
+  networking.interfaces."br0".ipv4.addresses = [{
     address = "192.168.24.50";
     prefixLength = 24;
   }];
