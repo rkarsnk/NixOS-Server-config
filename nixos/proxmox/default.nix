@@ -1,0 +1,12 @@
+{ ... }:
+{
+  services.pvePodman = {
+    enable = true;
+    parentIface = "enp1s0";
+    subnet = "192.168.24.0/24";
+    gateway = "192.168.24.1";
+    pveIp = "192.168.24.51";
+    pveDns = "192.168.24.1";
+  };
+}
+

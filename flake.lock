@@ -16,9 +16,31 @@
         "type": "github"
       }
     },
+    "pve-podman": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1786847328,
+        "narHash": "sha256-sXX5o2lKeuhIXoEg5mex9gmVAcOIxzmnOIIFQbkILag=",
+        "owner": "rkarsnk",
+        "repo": "PVE-podman",
+        "rev": "e836ae3d63307a1f57dfa99a522fb0b27489ccd3",
+        "type": "github"
+      },
+      "original": {
+        "owner": "rkarsnk",
+        "ref": "for-nixos",
+        "repo": "PVE-podman",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "pve-podman": "pve-podman"
       }
     }
   },
