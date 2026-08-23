@@ -10,5 +10,6 @@
     gateway = "192.168.24.1";
     pveIp = "192.168.24.51";
     pveDns = "192.168.24.1";
+    extraVolumes = [ "/srvdata/proxmox:/datastore" ];
   };
 }
