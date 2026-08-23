@@ -9,6 +9,7 @@
     [ # Include the results of the hardware scan.
       ./os/hardware-configuration.nix
       ./os/system.nix
+      ./os/storage.nix
       ./container/proxmox.nix
     ];
 }
