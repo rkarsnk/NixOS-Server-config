@@ -30,7 +30,8 @@ blueprintの規約により、`hosts/<ホスト名>/configuration.nix` が自動
         ├── configuration.nix             # imports のみのエントリーポイント
         ├── os/
         │   ├── hardware-configuration.nix  # nixos-generate-config によるハードウェア検出結果
-        │   └── system.nix                  # ホストOS本体の設定(ブート・ネットワーク・ユーザー等)
+        │   ├── system.nix                  # ホストOS本体の設定(ブート・ネットワーク・ユーザー等)
+        │   └── storage.nix                 # /srvdata (btrfs raid1) のマウント設定
         └── container/
             └── proxmox.nix                # Podman上でPVEを動かす services.pvePodman の設定
 ```
@@ -52,3 +53,52 @@ make switch  # nixos-rebuild switch(本適用)
 ```
 
 いずれも内部で `sudo nixos-rebuild <action> --flake .#nixserv` を実行します。
+
+
+## ストレージ構成
+### raid1ボリューム
+`/srvdata` はバックアップ/NAS用に、2TBのHDD `/dev/sda` と `/dev/sdb` を btrfs raid1(データ・メタデータ共にraid1)でミラーリングしたボリュームです。
+
+**このRAID1ボリュームの作成は意図的にNix化しておらず、事前に手動で構築したものを [storage.nix](hosts/nixserv/os/storage.nix) からUUID指定でマウントしているだけです。** `nixos-rebuild switch` の適用がディスクのフォーマット処理を含んでしまうと、デバイス名(`/dev/sda`/`/dev/sdb`)は再起動間で入れ替わり得ることもあり、既存データを誤って消去するリスクがあります。このホストはSSH専用でロールバック手段がないため、リスクとメリットを比較して手動運用のままとしています。
+
+再構築(ディスク交換など)が必要な場合は、以下を手動で実行してから `storage.nix` の `device` を新しいUUID(`blkid /dev/sda` 等で確認)に更新してください。
+
+```sh
+sudo mkfs.btrfs -L srvdata -d raid1 -m raid1 /dev/sda /dev/sdb
+```
+
+### 片側HDD障害時の対処
+
+**1. 障害の検知**
+
+```sh
+sudo btrfs device stats /srvdata      # read/write/corruption/generation の各エラーカウンタを確認
+sudo btrfs filesystem show /srvdata   # missing 表示のデバイスがないか確認
+sudo smartctl -a /dev/sdX             # ハードウェア障害の切り分け(SMART情報)
+```
+
+**2. 片方のディスクが完全に認識されない場合の緊急マウント**
+
+正常時はUUID指定の通常マウントで問題ないが、片方が脱落した状態で再起動するとマウントに失敗することがあるため、その場合は `degraded` オプションを付けてマウントする。
+
+```sh
+sudo mount -o degraded,compress=zstd,noatime /dev/disk/by-uuid/<storage.nixのUUID> /srvdata
+```
+
+**3. 故障ディスクの交換**
+
+物理的にHDDを交換した後、生きている側のデバイスから新しいディスクへ直接データを再構築する(`btrfs device add`+`remove`より高速・安全)。
+
+```sh
+sudo btrfs filesystem show /srvdata          # missingになっているdevidを確認
+sudo btrfs replace start <devid> /dev/sdX /srvdata
+sudo btrfs replace status /srvdata           # 進捗確認(完了までは時間がかかる)
+sudo btrfs device stats -z /srvdata          # 完了後、エラーカウンタをリセット
+```
+
+`btrfs replace` はファイルシステムのUUIDを変更しないため、交換後も `storage.nix` の `device` 指定(UUID)はそのまま変更不要。degradedマウントしていた場合は通常マウントに戻して問題なく起動できることを確認する。
+
+**4. (任意)定期的な整合性チェック**
+
+`sudo btrfs scrub start /srvdata` を定期実行しておくと、静かなデータ破損(silent corruption)を早期発見できる。進捗は `sudo btrfs scrub status /srvdata` で確認。
+

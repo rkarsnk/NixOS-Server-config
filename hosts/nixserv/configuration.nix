@@ -11,5 +11,6 @@
       ./os/system.nix
       ./os/storage.nix
       ./container/proxmox.nix
+      ./container/epgstation.nix
     ];
 }
