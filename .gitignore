@@ -1,1 +1,5 @@
 result
+
+# 独立したgitリポジトリとして別途クローンしたアプリソース(例: commute2invoice)。
+# nixos-config管理下には含めず、各リポジトリ側で更新する。
+/GitHub/

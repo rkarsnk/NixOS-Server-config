@@ -12,5 +12,6 @@
       ./os/storage.nix
       ./container/proxmox.nix
       ./container/epgstation.nix
+      ./container/commute2invoice.nix
     ];
 }

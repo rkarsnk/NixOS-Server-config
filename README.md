@@ -33,7 +33,9 @@ blueprintの規約により、`hosts/<ホスト名>/configuration.nix` が自動
         │   ├── system.nix                  # ホストOS本体の設定(ブート・ネットワーク・ユーザー等)
         │   └── storage.nix                 # /srvdata (btrfs raid1) のマウント設定
         └── container/
-            └── proxmox.nix                # Podman上でPVEを動かす services.pvePodman の設定
+            ├── proxmox.nix                # Podman上でPVEを動かす services.pvePodman の設定
+            ├── epgstation.nix             # Mirakurun+EPGStation+MariaDBのpodmanコンテナ設定
+            └── commute2invoice.nix        # commute2invoice(交通費精算アプリ)のpodmanコンテナ設定
 ```
 
 ## flake inputs
