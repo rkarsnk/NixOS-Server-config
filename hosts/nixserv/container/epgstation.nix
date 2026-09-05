@@ -43,7 +43,14 @@ in
     # mirakurunはチャンネルスキャン結果をchannels.ymlへ書き戻すため、
     # コンテナ内プロセスのUID(root/非rootかはイメージ依存で不明)によらず
     # 書き込めるようgit checkout後の権限を上書きする(activation/switch毎に再適用される)。
-    "Z ${confDir}/mirakurun-conf 0777 root root -"
+    # ディレクトリとyamlファイルでルールを分け、yamlファイルに不要な実行ビットが
+    # 付かないようにする(Zは再帰的に適用されるためファイルにも0777が付いてしまう)。
+    # 所有者は親ディレクトリ(git checkout時にrkarsnk:usersになる)と揃える。
+    # root:rootのままだとsystemd-tmpfilesが"unsafe path transition"とみなし、
+    # globパターンを使うzルールでの適用がサイレントにスキップされてしまう
+    # (モードが0777/0666で全ユーザーに読み書き権限があるため所有者自体は無関係)。
+    "d ${confDir}/mirakurun-conf 0777 rkarsnk users -"
+    "z ${confDir}/mirakurun-conf/*.yml 0666 rkarsnk users -"
   ];
 
   virtualisation.oci-containers.containers = {
