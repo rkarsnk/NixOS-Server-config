@@ -3,19 +3,57 @@
 NixOS + [numtide/blueprint](https://github.com/numtide/blueprint) によるサーバー `nixserv` の構成管理リポジトリ。
 
 [PVE-podman](https://github.com/rkarsnk/PVE-podman) を使い、Podmanコンテナ上でProxmox VE(PVE)を稼働させています。
+このほか、同じくPodmanコンテナとして地デジ録画サーバー(Mirakurun+EPGStation+MariaDB)と交通費精算Webアプリ(commute2invoice)もホスト上で動かしています。
 
 ## 構成図
 
 ホストOS・コンテナ・Proxmox VE・その先の仮想マシンやLXCコンテナがそれぞれ独立したLAN上のIPを持つ階層構成です
 (NATを介さず、ホスト側のLinuxブリッジ `br0` を通じてLANに直接ぶら下がります)。
 
-![nixservの構成図](docs/architecture.svg)
+```
+                         LAN (192.168.24.0/24)
+                                  │
+                    enp1s0(物理NIC, IPなし)
+   ┌──────────────────────────────┼──────────────────────────────┐
+   │ ホストOS: nixserv (NixOS)     │                              │
+   │              ┌───────────────┴───────────────┐              │
+   │              │ br0 (Linuxブリッジ)             │              │
+   │              │ IP: 192.168.24.50/24           │              │
+   │              └───────────────┬───────────────┘              │
+   │                              │ Podman bridge network         │
+   │                              │ (mode=unmanaged)               │
+   │              ┌───────────────┴───────────────┐              │
+   │              │ Podmanコンテナ eth0(veth,IPなし) │              │
+   │              │  ┌────────────────────────────┐│              │
+   │              │  │ Proxmox VE                  ││              │
+   │              │  │ vmbr0  IP: 192.168.24.51/24 ││              │
+   │              │  │ ┌──────┐ ┌──────┐ ┌───────┐ ││              │
+   │              │  │ │ VM#1 │ │ VM#2 │ │  LXC  │ ││              │
+   │              │  │ │      │ │      │ │.24.99 │ ││              │
+   │              │  │ └──────┘ └──────┘ └───────┘ ││              │
+   │              │  └────────────────────────────┘│              │
+   │              └────────────────────────────────┘              │
+   └────────────────────────────────────────────────────────────┘
+```
 
 - **ホストOS(nixserv)**: 物理NIC `enp1s0` をLinuxブリッジ `br0` のポートにし(`enp1s0` 自体はIPを持たない)、ホスト自身の固定IP `192.168.24.50/24` は `br0` に割り当てる。
 - **コンテナ(Podman)**: `br0` にPodmanの `bridge` ネットワーク(`mode=unmanaged`、`br0` の新規作成・NAT・ポートフォワードはPodman側で行わない)で接続する。コンテナの `eth0`(veth)自体はIPを持たない。PVE本体はこのコンテナの中で動く。
 - **Proxmox VE**: コンテナ内の `vmbr0` に `192.168.24.51/24` を割り当ててさらにLANへブリッジし、その配下で動く各VM・LXCコンテナ(例: `192.168.24.99`)もLAN上に個別のIPを持てる。
 
 以前はコンテナの接続にmacvlanを使っていたが、macvlan(既定のbridgeモード)は宛先MACアドレスをmacvlan子インターフェース自身のMACとハッシュ照合するだけで転送するため、コンテナ内 `vmbr0` がさらにブリッジする配下のVM/LXCのMAC宛フレームがLANとの間で正しく転送されない問題があった。本物のLinuxブリッジにはこの制約がないため、`br0` 方式に変更した(詳細は [PVE-podman](https://github.com/rkarsnk/PVE-podman) の `doc/SPEC.md` 13節を参照)。
+
+一方、epgstation(Mirakurun+EPGStation+MariaDB)とcommute2invoiceはPVEとは別系統で、`br0` には乗らずPodmanの既定 `bridge` ネットワーク(NAT)に接続している。LANからは `br0` のホストIP(`192.168.24.50`)に対して公開ポート経由でアクセスする、通常のDockerライクな構成。
+
+```
+                LAN (192.168.24.0/24)
+                         │
+      br0 (nixserv, 192.168.24.50) ──┬─ :8888,:8889 → epgstation
+                                      ├─ :40772,:9229 → mirakurun
+                                      └─ :8080        → commute2invoice
+                                          (Podman既定bridgeネットワーク経由、NAT)
+```
+
+mariadb-epg(MariaDB)はポート非公開でコンテナ間通信のみに使われるため、上図には含めていない。
 
 ## ディレクトリ構成
 
@@ -35,7 +73,11 @@ blueprintの規約により、`hosts/<ホスト名>/configuration.nix` が自動
         └── container/
             ├── proxmox.nix                # Podman上でPVEを動かす services.pvePodman の設定
             ├── epgstation.nix             # Mirakurun+EPGStation+MariaDBのpodmanコンテナ設定
+            ├── epgstation/                # ↑がマウントする設定ファイル本体(書き込み可能な通常パスとして参照)
+            │   ├── config/                  # EPGStationの設定(config.yml等)
+            │   └── mirakurun-conf/          # Mirakurunの設定(tuners.yml/channels.yml等)
             └── commute2invoice.nix        # commute2invoice(交通費精算アプリ)のpodmanコンテナ設定
+                                           # (ソース本体は /GitHub/commute2invoice に別クローン、.gitignore対象)
 ```
 
 ## flake inputs
