@@ -11,21 +11,22 @@
 # 録画データ・サムネイル・DB・ログ等の実行時データはRAID1の/srvdata配下に置く
 # (単一ディスク障害でのデータ消失を避けるため。詳細はREADME.mdのストレージ構成を参照)。
 #
-# epgstation イメージは upstream の debian.Dockerfile(独自ビルドffmpeg入り)ではなく
-# Docker Hub の l3tnun/epgstation 公式ビルド済みイメージをそのまま使う
-# (Nixのビルド時にDebianパッケージをapt-get取得するのは再現性がなく不適切なため)。
-# ARIB字幕焼き込み等でffmpegの追加コーデックが必要になった場合のみ、
-# 手動で `podman build` したカスタムイメージに image を差し替えること。
+# epgstation イメージは upstream の debian.Dockerfile を podman でビルドする。
+# ffmpeg はこのDockerfileから /usr/local/bin/ffmpeg と
+# /usr/local/bin/ffprobe に導入される。apt-get等のネットワーク取得を伴うため、
+# Nixビルドではなく起動前のsystemd oneshotサービスでビルドする。
 #
 # 初回デプロイ前に手動で用意すること:
 #   - mirakurun-conf/channels.yml をチューナー環境に合わせて編集
 #   - config/config.yml の mariadb接続パスワードをデフォルト("epgstation")から変更
 #   - SCR3310等のB-CASカードリーダーにカードを挿しておくこと(arib25用)
 
-{ ... }:
+{ config, ... }:
 
 let
   confDir = "/opt/etc/nixos-config/hosts/nixserv/container/epgstation";
+  srcDir = "/opt/etc/nixos-config/GitHub/docker-mirakurun-epgstation/epgstation";
+  imageName = "localhost/epgstation:ffmpeg";
 in
 {
   # コンテナ名(mirakurun/mariadb-epg/epgstation)でお互いを名前解決できるようにする。
@@ -52,6 +53,24 @@ in
     "d ${confDir}/mirakurun-conf 0777 rkarsnk users -"
     "z ${confDir}/mirakurun-conf/*.yml 0666 rkarsnk users -"
   ];
+
+  systemd.services.epgstation-build-image = {
+    description = "ffmpeg入り EPGStation podmanイメージをビルドする";
+    wants = [ "network-online.target" ];
+    after = [ "network-online.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      Delegate = true;
+      ExecStart = "${config.virtualisation.podman.package}/bin/podman build -f ${srcDir}/debian.Dockerfile -t ${imageName} ${srcDir}";
+    };
+  };
+
+  # oci-containersが生成するpodman-epgstation.serviceより先にローカルイメージを作成する。
+  systemd.services."podman-epgstation" = {
+    after = [ "epgstation-build-image.service" ];
+    requires = [ "epgstation-build-image.service" ];
+  };
 
   virtualisation.oci-containers.containers = {
     mirakurun = {
@@ -93,7 +112,8 @@ in
     };
 
     epgstation = {
-      image = "l3tnun/epgstation:latest";
+      image = imageName;
+      pull = "never";
       autoStart = true;
       dependsOn = [ "mirakurun" "mariadb-epg" ];
       ports = [ "8888:8888" "8889:8889" ];
