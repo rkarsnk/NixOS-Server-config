@@ -19,8 +19,10 @@
 # DBファイル(SQLite)はRAID1の/srvdata配下に永続化する
 # (単一ディスク障害でのデータ消失を避けるため)。
 #
-# commute2invoice自体はデバイスアクセス等の特権を必要としないアプリ(Go+SQLite+PDF生成)
-# なので、mirakurun/PVEのような他コンテナと違いrootful podmanで動かす理由がない。
+# commute2invoice自体はデバイスアクセス等の特権を必要としないアプリ
+# (Go+SQLite+PDF生成・交通会社明細書PDFの結合)なので、mirakurun/PVEのような他コンテナと
+# 違いrootful podmanで動かす理由がない。PDF結合に必要なpdfunite (poppler-utils) は、
+# アプリ側のDockerfileでイメージに含める。
 # 専用の非rootシステムユーザー(commute2invoice)を作り、rootless podmanで動かす。
 # rootless podmanはイメージストアがユーザーごとに独立するため、ビルドサービスも
 # 同じユーザーで実行する必要がある(rootでbuildしてもrootlessコンテナからは見えない)。
